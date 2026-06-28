@@ -44,16 +44,13 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Download bundles from PR
+      - name: Merge PR and update
         run: |
-          mkdir -p workspace incoming
-          for url in $(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files --jq '.[] | select(.filename | startswith("incoming/")) | .raw_url'); do
-            name=$(basename "$url")
-            curl -sL "$url" -o "workspace/$name"
-            echo "Downloaded: $name"
-          done
+          git remote set-url origin "https://x-access-token:${BOT_PAT}@github.com/klyx-dev/plugins.git"
+          git fetch origin ${{ github.event.pull_request.head.sha }}
+          git merge ${{ github.event.pull_request.head.sha }} --no-edit
         env:
-          GH_TOKEN: ${{ secrets.BOT_PAT }}
+          BOT_PAT: ${{ secrets.BOT_PAT }}
 
       - name: Publish bundles
         run: python3 .github/workflows/publish.py
@@ -72,8 +69,3 @@ jobs:
           git push origin main
         env:
           BOT_PAT: ${{ secrets.BOT_PAT }}
-
-      - name: Close PR
-        run: gh pr close ${{ github.event.pull_request.number }} --comment "Plugin published to main"
-        env:
-          GH_TOKEN: ${{ secrets.BOT_PAT }}
