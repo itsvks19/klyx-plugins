@@ -61,15 +61,10 @@ jobs:
           git commit -m "publish: ${{ steps.publish.outputs.plugin_id }} v${{ steps.publish.outputs.plugin_version }}"
           git push origin HEAD:${{ github.head_ref }}
 
-      - name: Auto-merge PR
+      - name: Merge PR
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for i in 1 2 3 4 5; do
-            gh pr merge ${{ github.event.number }} --merge --auto && exit 0
-            echo "Retry $i: waiting for mergeability..."
-            sleep 3
-          done
-          echo "Failed to merge PR after 5 retries"
-          exit 1
+          sleep 3
+          gh pr merge ${{ github.event.number }} --merge
