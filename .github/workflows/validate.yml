@@ -1,0 +1,68 @@
+name: Validate & Publish Plugin
+
+on:
+  pull_request:
+    paths:
+      - 'incoming/**'
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Direct URL to a .klyx bundle'
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Prepare workspace
+        run: mkdir -p workspace
+
+      - name: Download bundle (workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          curl -sL "${{ inputs.url }}" -o workspace/plugin.klyx
+
+      - name: Collect incoming files (PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          for f in incoming/*.klyx; do
+            [ -f "$f" ] && cp "$f" workspace/
+          done
+
+      - name: Validate and publish
+        id: publish
+        run: python .github/workflows/publish.py
+
+      - name: Commit and push
+        run: |
+          git config user.name "klyx-bot"
+          git config user.email "bot@klyx-dev.github.io"
+          git add plugins/ incoming/
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "publish: ${{ steps.publish.outputs.plugin_id }} v${{ steps.publish.outputs.plugin_version }}"
+          git push
+
+      - name: Auto-merge PR
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr merge ${{ github.event.pull_request.number }} --merge --auto
