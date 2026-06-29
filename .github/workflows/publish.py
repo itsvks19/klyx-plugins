@@ -21,11 +21,13 @@ def extract_plugin_json(tar: tarfile.TarFile) -> dict:
 
 
 def validate_meta(meta: dict):
-    required = ["id", "version", "name", "minAppVersion"]
+    required = ["id", "version", "name", "minAppVersion", "entryClass"]
     for field in required:
         if field not in meta:
             raise ValueError(f"plugin.json missing required field: {field}")
-    if not isinstance(meta["id"], str) or "/" in meta["id"]:
+        if not isinstance(meta[field], str) or not meta[field].strip():
+            raise ValueError(f"plugin.json '{field}' must be a non-empty string")
+    if "/" in meta["id"]:
         raise ValueError("plugin.id must be a string without '/'")
     if meta.get("maxAppVersion") is not None and not isinstance(meta["maxAppVersion"], str):
         raise ValueError("plugin.maxAppVersion must be a string or null")

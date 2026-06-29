@@ -18,14 +18,27 @@ def main():
         print(f"❌ Invalid bundle {path}: {e}", flush=True)
         sys.exit(1)
 
-    required = ["id", "version", "name", "minAppVersion"]
+    required = ["id", "version", "name", "minAppVersion", "entryClass"]
     for field in required:
         if field not in meta:
             print(f"❌ {path}: plugin.json missing required field '{field}'", flush=True)
             sys.exit(1)
+        if not isinstance(meta[field], str) or not meta[field].strip():
+            print(f"❌ {path}: plugin.json '{field}' must be a non-empty string", flush=True)
+            sys.exit(1)
 
     if "/" in meta["id"]:
         print(f"❌ {path}: plugin.id must not contain '/'", flush=True)
+        sys.exit(1)
+
+    if "author" in meta:
+        author = meta["author"]
+        if isinstance(author, dict) and "name" not in author:
+            print(f"❌ {path}: plugin.json 'author' must have a 'name' field if present", flush=True)
+            sys.exit(1)
+
+    if not isinstance(meta.get("description", ""), str):
+        print(f"❌ {path}: plugin.json 'description' must be a string", flush=True)
         sys.exit(1)
 
     print(f"✅ {path}: {meta['id']} v{meta['version']} valid", flush=True)
