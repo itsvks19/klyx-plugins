@@ -86,10 +86,18 @@ jobs:
         with:
           python-version: '3.14'
 
+      - name: Check for bundles
+        id: check
+        run: |
+          count=$(ls -1 incoming/*.klyx 2>/dev/null | wc -l)
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
       - name: Publish bundles
+        if: steps.check.outputs.count != '0'
         run: python3 .github/workflows/publish.py
 
       - name: Commit and push to main
+        if: steps.check.outputs.count != '0'
         run: |
           git config user.name "klyx-bot"
           git config user.email "bot@klyx-dev.github.io"
@@ -105,6 +113,7 @@ jobs:
           BOT_PAT: ${{ secrets.BOT_PAT }}
 
       - name: Purge jsDelivr cache
+        if: steps.check.outputs.count != '0'
         run: |
           curl -s "https://purge.jsdelivr.net/gh/klyx-dev/plugins@main/plugins/index.json"
           python3 .github/workflows/purge_cache.py incoming/*.klyx 2>/dev/null || true
