@@ -7,5 +7,14 @@
     "author": "Klyx Team",
     "minAppVersion": "4.2.0",
     "maxAppVersion": null
+  },
+  {
+    "id": "com.klyx.sampleplugin",
+    "name": "Sample Plugin",
+    "version": "1.0.1",
+    "description": "A reference implementation showing the Klyx plugin API capabilities.",
+    "author": "Klyx Team",
+    "minAppVersion": "4.2.0",
+    "maxAppVersion": null
   }
 ]
