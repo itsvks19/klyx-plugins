@@ -28,21 +28,44 @@ jobs:
         with:
           python-version: '3.14'
 
-      - name: Check ownership
+      - name: Validate bundles
+        id: validate
         run: |
+          truncate -s 0 /tmp/validate_output.txt
           files=(incoming/*.klyx)
           if [ -f "${files[0]}" ]; then
+            echo "Checking ownership and validating bundles..." | tee -a /tmp/validate_output.txt
             python3 .github/workflows/check_owner.py \
               "${{ github.event.pull_request.user.login }}" \
-              "${files[@]}"
+              "${files[@]}" 2>&1 | tee -a /tmp/validate_output.txt
+            for f in incoming/*.klyx; do
+              [ ! -f "$f" ] && continue
+              python3 .github/workflows/validate_bundle.py "$f" 2>&1 | tee -a /tmp/validate_output.txt
+            done
+          else
+            echo "No incoming bundles to validate." | tee -a /tmp/validate_output.txt
           fi
 
-      - name: Validate bundles
+      - name: Post validation comment
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          for f in incoming/*.klyx; do
-            [ ! -f "$f" ] && continue
-            python3 .github/workflows/validate_bundle.py "$f"
-          done
+          outcome=${{ steps.validate.outcome }}
+          body=$(cat /tmp/validate_output.txt)
+          {
+            if [ "$outcome" = "success" ]; then
+              echo "✅ **Validation passed**"
+            else
+              echo "❌ **Validation failed**"
+            fi
+            echo ""
+            echo '```'
+            echo "$body"
+            echo '```'
+          } > /tmp/comment_body.txt
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body-file /tmp/comment_body.txt
 
   publish:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
